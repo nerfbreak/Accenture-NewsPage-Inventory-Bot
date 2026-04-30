@@ -9,52 +9,50 @@ from playwright.sync_api import sync_playwright
 URL_LOGIN = "https://rb-id.np.accenture.com/RB_ID/Logon.aspx"
 
 def main():
+    # 1. HEADER & INPUT (Terminal Only)
+    os.system("title Stock Adjustment - by Rizki Firdaus")
+    os.system('cls' if os.name == 'nt' else 'clear')
+    
+    print("-" * 65)
+    print("           INVENTORY STOCK ADJUSTMENT")
+    print("           Created by: Rizki Firdaus")
+    print("-" * 65)
+    
+    print("\n[!] Silakan masukkan kredensial Accenture NewsPage Anda:")
+    user_id = input("    User ID  : ")
+    password = input("    Password : ")
+    
+    # 2. PROSES INISIALISASI (Baru mulai di sini)
+    print("\n[*] Kredensial diterima. Menyiapkan sistem...")
+    
     try:
-        # Memaksa install chromium jika tidak ditemukan
+        # Cek dependencies sebelum browser muncul
         subprocess.run(["playwright", "install", "chromium"], check=True)
     except:
         pass
-    
+
+    print("[*] Membuka browser dan mencoba login otomatis...")
+
+    # 3. BROWSER MUNCUL DI SINI
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, slow_mo=0, args=["--start-maximized"])
-        context = browser.new_context(
-            no_viewport=True
-        )
+        context = browser.new_context(no_viewport=True)
         page = context.new_page()
 
-        # =========================================================
-        # HEADER MINIMALIS - CREATED BY RIZKI FIRDAUS
-        # =========================================================
-        os.system("title Stock Adjustment - by Rizki Firdaus")
-    
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("-" * 65)
-        print("           INVENTORY STOCK ADJUSTMENT")
-        print("           Created by: Rizki Firdaus")
-        print("-" * 65)
-        
-        # 1. Input User ID dan Password di Terminal
-        print("\n[!] Silakan masukkan kredensial Accenture NewsPage Anda:")
-        user_id = input("    User ID  : ")
-        password = input("    Password : ")
-        
-        print("\n[*] Membuka browser dan mencoba login otomatis...")
         page.goto(URL_LOGIN)
 
-        # 2. Proses Login Otomatis
+        # Proses Login Otomatis
         page.locator("id=txtUserid").fill(user_id)
         page.locator("id=txtPasswd").fill(password)
         page.locator("id=btnLogin").click(force=True)
         
-        # 3. Logika Handle Sesi Ganda (Tombol Continue)
+        # Logika Handle Sesi Ganda (Tombol Continue)
         try:
             btn_continue = page.locator("id=SYS_ASCX_btnContinue")
-            # Tunggu sebentar untuk cek apakah halaman konfirmasi muncul
             btn_continue.wait_for(state="visible", timeout=5000)
             print("[!] Sesi aktif terdeteksi. Mengklik Continue...")
             btn_continue.click(force=True)
         except:
-            # Jika tidak muncul dalam 5 detik, lanjut ke pengecekan URL utama
             pass
         
         # Menunggu hingga masuk ke halaman utama
@@ -110,7 +108,6 @@ def main():
                         
                         page.locator("id=pag_I_StkAdj_NewGeneral_btn_Add_Value").click(force=True)
                         
-                        # SMART WAIT: Tunggu sampai input SKU bersih kembali
                         page.wait_for_function("document.getElementById('pag_I_StkAdj_NewGeneral_sel_PRD_CD_Value').value === ''", timeout=30000)
                         time.sleep(0.5) 
                         
@@ -139,9 +136,6 @@ def main():
         except Exception as e:
             print(f"\n[!] Terjadi kesalahan: {e}")
             
-        # =========================================================
-        # TAHAP 4: SELESAI
-        # =========================================================
         print("\n[!] Task Done! Holding Browser...")
         input(">>> Hit ENTER if Done ")
 
