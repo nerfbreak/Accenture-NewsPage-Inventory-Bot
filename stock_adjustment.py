@@ -18,18 +18,17 @@ def loading_animation(stop_event, message="Processing"):
         sys.stdout.flush()
         idx += 1
         time.sleep(0.08)
-    sys.stdout.write("\r" + " " * (len(message) + 20) + "\r")
+    sys.stdout.write("\r" + " " * 65 + "\r")
 
 def main():
-    # 1. HEADER DENGAN BINGKAI
     os.system("title Stock Adjustment - by Rizki Firdaus")
     os.system('cls' if os.name == 'nt' else 'clear')
     
+    # 1. HEADER (Locked 65 Char)
     print("\033[96m")
-    print("┌───────────────────────────────────────────────────────────────┐")
-    print("│                INVENTORY STOCK ADJUSTMENT v1.0                │")
-    print("│                  Developed by: Rizki Firdaus                  │")
-    print("└───────────────────────────────────────────────────────────────┘\033[0m")
+    print("                INVENTORY STOCK ADJUSTMENT v1.0                ")
+    print("                  Developed by: Kopi Mang Toni                 ")
+    print("\033[0m")
     
     print("\n \033[97m[\033[94m!\033[97m] Authentication Required\033[0m")
     user_id = input("     User ID  : ")
@@ -88,11 +87,9 @@ def main():
             stop_menu.set()
             menu_loader.join()
             
-            # --- TAHAP 2: TABEL MONITORING ---
-            print("\033[94m┌" + "─"*30 + "┬" + "─"*12 + "┬" + "─"*15 + "┐")
-            print(f"│ {'PRODUCT SKU':<28} │ {'QTY':<10} │ {'STATUS':<13} │")
-            print("├" + "─"*30 + "┼" + "─"*12 + "┼" + "─"*15 + "┤\033[0m")
-
+            # --- TAHAP 2: LOG STREAM ---
+            print(f" \033[96m» Starting SKU Input Process...\033[0m")
+            
             success_count = 0
             failed_count = 0
 
@@ -117,18 +114,15 @@ def main():
                         
                         page.wait_for_function("document.getElementById('pag_I_StkAdj_NewGeneral_sel_PRD_CD_Value').value === ''", timeout=30000)
                         
-                        # FIX: Reset warna biru (\033[94m) sebelum mencetak karakter pembatas │
-                        print(f"\033[94m│ \033[93m{sku:<28} \033[94m│ \033[95m{qty:<10} \033[94m│ \033[92mSUCCESS\033[94m       │")
+                        print(f"   \033[94m→\033[0m SKU: \033[93m{sku:<10}\033[0m | QTY: \033[95m{qty:<5}\033[0m | Status: \033[92mSUCCESS\033[0m")
                         success_count += 1
                     except Exception:
-                        print(f"\033[94m│ \033[93m{sku:<28} \033[94m│ \033[95m{qty:<10} \033[94m│ \033[91mFAILED\033[94m        │")
+                        print(f"   \033[94m→\033[0m SKU: \033[93m{sku:<10}\033[0m | QTY: \033[95m{qty:<5}\033[0m | Status: \033[91mFAILED\033[0m")
                         failed_count += 1
                         time.sleep(2)
 
-            print("\033[94m└" + "─"*30 + "┴" + "─"*12 + "┴" + "─"*15 + "┘\033[0m")
-
             # --- TAHAP 3: SAVE ---
-            print("\n \033[93m» Finalizing Document...\033[0m")
+            print(f"\n \033[93m» Finalizing Document...\033[0m")
             page.locator("id=pag_I_StkAdj_NewGeneral_btn_Save_Value").click()
             
             try:
@@ -139,12 +133,10 @@ def main():
             except Exception:
                 print(" \033[92m✔ Auto-saved successfully.\033[0m")
             
-            # --- FINAL SUMMARY (CENTERED) ---
-            print("\n\033[96m╔" + "═"*63 + "╗")
-            summary_text = f"PROCESS COMPLETED | SUCCESS: {success_count} | FAILED: {failed_count}"
-            # Menggunakan .center(63) agar teks berada tepat di tengah kotak
-            print(f"║{summary_text.center(63)}║")
-            print("╚" + "═"*63 + "╝\033[0m")
+            # --- FINAL SUMMARY (TOTAL CLEAN - NO LINES) ---
+            print("\n")
+            # Teks Bold Cyan untuk judul, Hijau untuk Sukses, Merah untuk Gagal
+            print(f" \033[1;96mPROCESS COMPLETED\033[0m | SUCCESS: \033[1;92m{success_count}\033[0m | FAILED: \033[1;91m{failed_count}\033[0m")
             
         except Exception as e:
             print(f"\n\033[91m[!] Error: {e}\033[0m")
