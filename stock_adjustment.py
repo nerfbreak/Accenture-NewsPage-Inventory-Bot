@@ -16,8 +16,10 @@ def main():
         pass
     
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=0)
-        context = browser.new_context()
+        browser = p.chromium.launch(headless=False, slow_mo=0, args=["--start-maximized"])
+        context = browser.new_context(
+            no_viewport=True
+        )
         page = context.new_page()
 
         # =========================================================
