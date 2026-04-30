@@ -21,7 +21,7 @@ def loading_animation(stop_event, message="Processing"):
     sys.stdout.write("\r" + " " * (len(message) + 20) + "\r")
 
 def main():
-    # 1. HEADER DENGAN BINGKAI (Visual Upgrade)
+    # 1. HEADER DENGAN BINGKAI
     os.system("title Stock Adjustment - by Rizki Firdaus")
     os.system('cls' if os.name == 'nt' else 'clear')
     
@@ -117,10 +117,11 @@ def main():
                         
                         page.wait_for_function("document.getElementById('pag_I_StkAdj_NewGeneral_sel_PRD_CD_Value').value === ''", timeout=30000)
                         
-                        print(f"│ {sku:<28} │ {qty:<10} │ \033[92mSUCCESS\033[0m       │")
+                        # FIX: Reset warna biru (\033[94m) sebelum mencetak karakter pembatas │
+                        print(f"\033[94m│ \033[93m{sku:<28} \033[94m│ \033[95m{qty:<10} \033[94m│ \033[92mSUCCESS\033[94m       │")
                         success_count += 1
                     except Exception:
-                        print(f"│ {sku:<28} │ {qty:<10} │ \033[91mFAILED\033[0m        │")
+                        print(f"\033[94m│ \033[93m{sku:<28} \033[94m│ \033[95m{qty:<10} \033[94m│ \033[91mFAILED\033[94m        │")
                         failed_count += 1
                         time.sleep(2)
 
@@ -138,10 +139,12 @@ def main():
             except Exception:
                 print(" \033[92m✔ Auto-saved successfully.\033[0m")
             
-            # --- FINAL SUMMARY ---
-            print("\n\033[96m" + "═"*65)
-            print(f"  PROCESS COMPLETED | SUCCESS: {success_count} | FAILED: {failed_count}")
-            print("═"*65 + "\033[0m")
+            # --- FINAL SUMMARY (CENTERED) ---
+            print("\n\033[96m╔" + "═"*63 + "╗")
+            summary_text = f"PROCESS COMPLETED | SUCCESS: {success_count} | FAILED: {failed_count}"
+            # Menggunakan .center(63) agar teks berada tepat di tengah kotak
+            print(f"║{summary_text.center(63)}║")
+            print("╚" + "═"*63 + "╝\033[0m")
             
         except Exception as e:
             print(f"\n\033[91m[!] Error: {e}\033[0m")
