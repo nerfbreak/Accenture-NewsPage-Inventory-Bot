@@ -17,6 +17,7 @@ WAREHOUSE   = "GOOD_WHS"
 TIMEOUT_MS  = 30_000
 
 GLOBAL_START_TIME = 0.0  # Ditambahkan untuk kalkulasi waktu berjalan
+ALIGN_WIDTH = 90         # Diperlebar agar teks panjang tidak menabrak timer
 
 # ─── ANSI — Blue-Dominant Palette ────────────────────────────────────────────
 R      = "\033[0m"
@@ -43,7 +44,7 @@ def strip_ansi(text: str) -> str:
     """Menghapus kode ANSI agar hitungan panjang karakter (width) akurat."""
     return ANSI_ESCAPE.sub('', text)
 
-def print_aligned(left_str: str, right_str: str, total_width: int = 75):
+def print_aligned(left_str: str, right_str: str, total_width: int = ALIGN_WIDTH):
     """Mencetak log dengan meratakan ujung akhir right_str ke batas total_width."""
     vis_left = len(strip_ansi(left_str))
     vis_right = len(strip_ansi(right_str))
@@ -98,11 +99,10 @@ def log_section(title: str):
     sys.stdout.flush()
     typewriter(title.upper(), SKY, delay=0.03)
     
-    # Rata kanan sempurna untuk section divider
     right_str = f"{GHOST}{_ts_formatted()}{R}"
-    vis_left = 5 + len(title)  # "  ◆  " + title
+    vis_left = 5 + len(title)
     vis_right = len(strip_ansi(right_str))
-    pad_len = 75 - (vis_left + vis_right)
+    pad_len = ALIGN_WIDTH - (vis_left + vis_right)
     pad = " " * pad_len if pad_len > 0 else " "
     
     sys.stdout.write(f"{pad}{right_str}\n")
@@ -130,13 +130,13 @@ class Spinner:
             
             vis_left = len(strip_ansi(left_str))
             vis_right = len(strip_ansi(right_str))
-            pad_len = 75 - (vis_left + vis_right)
+            pad_len = ALIGN_WIDTH - (vis_left + vis_right)
             pad = " " * pad_len if pad_len > 0 else " "
             
             sys.stdout.write(f"\r{left_str}{pad}{right_str}")
             sys.stdout.flush()
             time.sleep(0.08)
-        sys.stdout.write("\r" + " " * 80 + "\r")
+        sys.stdout.write("\r" + " " * 100 + "\r")
         sys.stdout.flush()
 
     def __enter__(self):
@@ -220,27 +220,45 @@ def login(page, user_id: str, password: str):
     try:
         btn = page.locator("id=SYS_ASCX_btnContinue")
         btn.wait_for(state="visible", timeout=5_000)
-        log_warn("Conflict session detected — resuming")
+        log_warn("Same User Already Logged On — Continue")
         btn.click(force=True)
     except: pass
     page.wait_for_url("**/Default.aspx", timeout=0, wait_until="domcontentloaded")
     log_ok(f"Authenticated  {MIST}as{R}  {WHITE}{B}{user_id}{R}")
 
-def navigate_to_stock_adjustment(page):
-    with Spinner("Opening stock adjustment form"):
-        page.locator("id=pag_InventoryRoot_tab_Main_itm_StkAdj").dispatch_event("click")
-        add_btn = page.locator("id=pag_I_StkAdj_btn_Add_Value")
-        add_btn.wait_for(state="attached", timeout=TIMEOUT_MS)
-        add_btn.click(force=True)
-        page.get_by_role("link", name=WAREHOUSE, exact=True).wait_for(state="visible", timeout=TIMEOUT_MS)
-        page.get_by_role("link", name=WAREHOUSE, exact=True).click(force=True)
-        page.locator("id=pag_I_StkAdj_NewGeneral_sel_PRD_CD_Value").wait_for(state="visible", timeout=TIMEOUT_MS)
-    log_ok(f"Form Ready  {MIST}·{R}  Warehouse  {WHITE}{B}{WAREHOUSE}{R}")
-
 def set_reason_once(page):
     dropdown = page.locator("id=pag_I_StkAdj_NewGeneral_drp_n_REASON_HDR_Value")
     if dropdown.is_enabled():
         dropdown.select_option(REASON_CODE)
+
+def navigate_to_stock_adjustment(page):
+    log_run("Accessing Inventory Menu")
+    time.sleep(4)
+    page.locator("id=pag_InventoryRoot_tab_Main_itm_StkAdj").dispatch_event("click")
+    time.sleep(5)
+    
+    add_btn = page.locator("id=pag_I_StkAdj_btn_Add_Value")
+    add_btn.wait_for(state="attached", timeout=TIMEOUT_MS)
+    log_ok("Inventory Menu accessed")
+
+    log_run("Initializing new record")
+    add_btn.click(force=True)
+    time.sleep(2)
+    page.get_by_role("link", name=WAREHOUSE, exact=True).wait_for(state="visible", timeout=TIMEOUT_MS)
+    log_ok("Add form initialized")
+
+    log_run("Selecting Reason")
+    time.sleep(0.5)
+
+    log_run("Selecting warehouse")
+    page.get_by_role("link", name=WAREHOUSE, exact=True).click(force=True)
+    page.locator("id=pag_I_StkAdj_NewGeneral_sel_PRD_CD_Value").wait_for(state="visible", timeout=TIMEOUT_MS)
+    
+    # Eksekusi Reason dipindah ke sini setelah form utama termuat penuh
+    set_reason_once(page)
+    
+    # Kembali menampilkan keterangan form ready dengan detail warehouse dan reason
+    log_ok(f"Form Ready {MIST}·{R} {WHITE}{B}{WAREHOUSE}{R} {MIST}·{R} {WHITE}{B}{REASON_CODE} - Selisih Barang{R}")
 
 def process_row(page, sku: str, qty: str) -> bool:
     sku_input = page.locator("id=pag_I_StkAdj_NewGeneral_sel_PRD_CD_Value")
@@ -254,7 +272,6 @@ def process_row(page, sku: str, qty: str) -> bool:
     return True
 
 def process_csv(page) -> tuple[int, int]:
-    set_reason_once(page)
     success_count = failed_count = 0
 
     with open(CSV_FILE, mode="r", encoding="utf-8") as f:
@@ -271,12 +288,15 @@ def process_csv(page) -> tuple[int, int]:
             s_color = MINT  if ok else CORAL
             s_text  = "ok"  if ok else "failed"
             num_raw = f"{idx:>2}."
+            
+            # Format qty agar mendapat slot fix (4 karakter rata kiri) sebelum ditambah EA
+            qty_uom = f"{qty:<4} EA"
 
             left_str = (
-                f"  {GHOST}{num_raw:<6}{R}"
-                f"{ICE}{B}{sku:<20}{R}"
-                f"{VIOLET}{qty:<10}{R}"
-                f"{s_color}{B}{s_text:<15}{R}"
+                f"  {GHOST}{num_raw:<5}{R}"
+                f"{ICE}{B}{sku:<16}{R}"
+                f"{VIOLET}{qty_uom:<10}{R}"
+                f"{s_color}{B}{s_text:<12}{R}"
             )
             right_str = f"{GHOST}{_ts_formatted()}{R}"
             print_aligned(left_str, right_str)
@@ -309,7 +329,7 @@ def print_summary(success_count: int, failed_count: int):
     right_str = f"{GHOST}{_ts_formatted()}{R}"
     vis_left = 5 + 16 # "  ◆  " + "PROCESS COMPLETE"
     vis_right = len(strip_ansi(right_str))
-    pad_len = 75 - (vis_left + vis_right)
+    pad_len = ALIGN_WIDTH - (vis_left + vis_right)
     pad = " " * pad_len if pad_len > 0 else " "
     sys.stdout.write(f"{pad}{right_str}\n")
     sys.stdout.flush()
@@ -359,7 +379,7 @@ def main():
             login(page, user_id, password)
             log_section("navigation")
             navigate_to_stock_adjustment(page)
-            log_section("sku stream")
+            log_section("processing sku")
             success_count, failed_count = process_csv(page)
             save_document(page)
             print_summary(success_count, failed_count)
